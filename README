@@ -1,0 +1,25 @@
+
+
+1. I will use scarpy redis to crawl data
+    * scrapy startproject star_crawl
+    * 
+2. backgroup
+    补充下各站点抓取图片的位置，截图示意：
+    1.  爱豆网：
+        1.1 明星list：http://idol001.com/app.html#md4
+        1.2 具体抓图地址： 
+
+    红框标注为抓取图片入口，对应图片均为同一组组图
+
+    2.   饭团网：
+       2.1  明星list：http://www.ixingji.com/f/square.html
+       2.2  具体抓图地址： 
+        图片tab标签下图片均为抓取各组图图片入口
+
+
+    3.    粉丝网：
+     3.1   明星list：http://www.ifensi.com/list21/
+     3.2   具体抓图地址： 
+     tab标签下图片均为抓取各组图图片入口
+
+
