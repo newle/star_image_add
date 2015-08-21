@@ -21,5 +21,13 @@
      3.1   明星list：http://www.ifensi.com/list21/
      3.2   具体抓图地址： 
      tab标签下图片均为抓取各组图图片入口
+3. 数据表需要注意的项：
+    以下为数据库表pic_recommend_image 需要的字段
 
+    ori_pic_src 原图地址
+    page_url 页面地址
+    pic_title 标题
+    category 类别 写死为 明星
+    tag 明星名 如果是多个用；分隔
+    pfrom 写死成51
 
