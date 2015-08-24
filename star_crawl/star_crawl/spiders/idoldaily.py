@@ -23,6 +23,11 @@ def getstrtime(timestamp):
     x = time.localtime(timestamp)
     return time.strftime('%Y-%m-%d %H:%M:%S',x)
 
+currenttimestamp = int(time.time())
+validrange = 3600*24 + 1000
+def validtime(timestamp):
+    return timestamp > (currenttimestamp - validrange)
+
 
 
 
@@ -68,9 +73,9 @@ def getkv(url, key):
 
 class idolSpider(RedisMixin, CrawlSpider):
     """Spider that reads urls from redis queue (idol:start_urls)."""
-    name = "idol"
-    start_urls = ["http://static.mobile.idol001.com/index/star_info_list.json", ]
-    #redis_key = "idol:start_urls"
+    name = "idoldaily"
+    #start_urls = ["http://static.mobile.idol001.com/index/star_info_list.json", ]
+    redis_key = "idoldaily:start_urls"
     #rules =  (
     #        Rule(LinkExtractor(process_value = process_idol_url), callback='parse_page', follow=False),
     #)
@@ -88,16 +93,6 @@ class idolSpider(RedisMixin, CrawlSpider):
     def _set_crawler(self, crawler):
         CrawlSpider._set_crawler(self, crawler)
         RedisMixin.setup_redis(self)
-
-    def parse_page(self, response):
-        el = starCrawlLoader(response = response)
-        el.add_value('question_url', response.url)
-        el.add_xpath('label_html', '//div[@class="xiti-content"]/div[@class="ndwz"]')
-        el.add_xpath('question_html', '(//div[@class="timutext"])[1]')
-        el.add_xpath('ans_html', '(//div[@class="answer_inner"])[1]')
-
-        return el.load_item()
-
 
     def parse_event(self, response):
         r_json = json.loads(response.body)
@@ -128,6 +123,7 @@ class idolSpider(RedisMixin, CrawlSpider):
             imgitem = StarCrawlItem()
             imgitem['ori_pic_src'] = image['web_page']
             imgitem['publish_time'] = getstrtime(image['public_time']/1000)
+            logging.debug(self.idols_name[int(sid)].encode('gb18030'))
             logging.debug(getpingyin(self.idols_name[int(sid)]))
 
             imgitem['page_url'] = "http://idol001.com/xingcheng/detail/images/star-" + getpingyin(self.idols_name[int(sid)]) + "-" + sid + "/" + event_id + "/" + page_idx
@@ -145,29 +141,34 @@ class idolSpider(RedisMixin, CrawlSpider):
 
         page_idx = getkv(response.url, "page")
         sid  = getkv(response.url, "starid")
-
-        if page_idx == "1":
-        #if False:
-            #get suffix page
-            eventnum = r_json['allcount']
-            pages = ((eventnum - 1)/10) + 1
-            if pages >= 2:
-                for i in range(2, pages + 1):
-                    idolurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_tuji_list&starid=" + sid + "&page=" + str(i)
-                    idolrequest = Request(idolurl, callback='parse_idol_list', dont_filter=True, priority=0)
-                    self.crawler.engine.schedule(idolrequest, spider=self.crawler.spider)
-
         #parse list
         #"http://data.android.idol001.com/api_moblie_idol.php?action=star_xingcheng_gaoqingtu_list&channelId=S002&starid=6846&page=1&version=68&xcid=55c8193acd4e706d728b462e"
         events = r_json['list']
+        valid = True
         for i in range(len(events)):
             event = events[i]
             event_id = event['_id']
-            self.event_name[event_id] = event['action']
-            eventurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_xingcheng_gaoqingtu_list&channelId=S002&starid=" + sid + "&page=1&version=68&xcid=" + event_id
-            eventrequest = Request(eventurl, callback='parse_event', dont_filter=True, priority=1)
-            self.crawler.engine.schedule(eventrequest, spider=self.crawler.spider)
+            event_time = event['image']['public_time']
+            if validtime(event_time/1000) :
+                self.event_name[event_id] = event['action']
+                eventurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_xingcheng_gaoqingtu_list&channelId=S002&starid=" + sid + "&page=1&version=68&xcid=" + event_id
+                eventrequest = Request(eventurl, callback='parse_event', dont_filter=True, priority=1)
+                self.crawler.engine.schedule(eventrequest, spider=self.crawler.spider)
+            else :
+                #logging.debug("is event action instance unicode" + " yes" if isinstance(event['action'], unicode) else "no")
+                logging.debug(unicode(event_id + u" " + event['action'] + u" is happened at " + getstrtime(event_time/1000) + u" , we will stop at this time").encode('gb18030'))
+                valid = False
             #break
+
+        eventnum = r_json['allcount']
+        pages = ((eventnum - 1)/10) + 1
+        if valid and int(page_idx) < pages:
+            nextpageidx = int(page_idx)+1
+            idolurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_tuji_list&starid=" + sid + "&page=" + str(nextpageidx)
+            idolrequest = Request(idolurl, callback='parse_idol_list', dont_filter=True, priority=0)
+            self.crawler.engine.schedule(idolrequest, spider=self.crawler.spider)
+
+
 
 
     def parse(self, response):
@@ -175,66 +176,19 @@ class idolSpider(RedisMixin, CrawlSpider):
         r_json = json.loads(response.body)
         #logging.debug(r_json);
 
-        processedlist = [
-                '2PM',        
-                'BigBang',   
-                'BTOB',       
-                'EXID',       
-                'EXO',        
-                'F(X)',       
-                'IU',         
-                'Red Velvet', 
-                'SHINee', 
-                ]
-        processedset = set(processedlist)
-
+        logging.debug("idol totalnum = " + str(len(r_json['list'])))
         for i in range(len(r_json['list'])):
             person = r_json['list'][i]
             self.idols_id.append(person['sid'])
             self.idols_name[person['sid']] = person['name']
             logging.debug(person['sid'])
             logging.debug(person['name'].encode('gb18030'))
-            if person['name'] not in processedlist:
-                idolurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_tuji_list&starid=" + str(person['sid']) + "&page=1"
-                idolrequest = Request(idolurl, callback='parse_idol_list', dont_filter=True, priority=0)
-                self.crawler.engine.schedule(idolrequest, spider=self.crawler.spider)
+            idolurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_tuji_list&starid=" + str(person['sid']) + "&page=1"
+            idolrequest = Request(idolurl, callback='parse_idol_list', dont_filter=True, priority=0)
+            self.crawler.engine.schedule(idolrequest, spider=self.crawler.spider)
             #break
         
 
         #for i in range(len(self.idols_id)):
         #    print self.idols_id[i], self.idols_name[self.idols_id[i]].encode('gb18030')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
