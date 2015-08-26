@@ -24,38 +24,35 @@ class StarCrawlPipeline(object):
 
     def process_item(self, item, spider):
         #insert into mysql db
-        try:
-                #test Variaty
-            if not self.varified(item):
-                logging.debug(item['ori_pic_src'] + " is not varified!")
-                return None
-        
-            if self.m_dbcur.execute(self.m_testQuery, (item['ori_pic_src'], )):
-                logging.debug(item['ori_pic_src'] + " has in db before we insert!")
-            else:
-                logging.debug("update to server " + item['page_url'])
-                while True:
-                    try:
-                        self.m_dbcur.execute(self.m_insertQuery, (
-                            item['ori_pic_src'],
-                            item['pic_title'],
-                            item['page_url'],
-                            item['pic_title'],
-                            item['publish_time'],
-                            item['tag'],
-                            item['category'],
-                            item['pfrom'],
-                            item['group_idx'],
-                            item['group_mark']))
-                        self.m_dbconn.commit()
-                        break
-                    except Exception, e:
-                        logging.debug(e)
-                        self.m_dbconn = MySQLdb.connect("pic01.ss.mysql.db.sogou-op.org", "chanpinyunying","m6i1m2a3","pic_tiny", charset='utf8', use_unicode=False)
-                        self.m_dbcur = self.m_dbconn.cursor()
-                logging.debug("update to server " + item['page_url'])
-        except Exception, e:
-            print e
+        while True:
+            try:
+                 #test Variaty
+                if not self.varified(item):
+                    logging.debug(item['ori_pic_src'] + " is not varified!")
+                    return None
+            
+                if self.m_dbcur.execute(self.m_testQuery, (item['ori_pic_src'], )):
+                    logging.debug(item['ori_pic_src'] + " has in db before we insert!")
+                else:
+                    logging.debug("update to server " + item['page_url'])
+                    self.m_dbcur.execute(self.m_insertQuery, (
+                        item['ori_pic_src'],
+                        item['pic_title'],
+                        item['page_url'],
+                        item['pic_title'],
+                        item['publish_time'],
+                        item['tag'],
+                        item['category'],
+                        item['pfrom'],
+                        item['group_idx'],
+                        item['group_mark']))
+                    self.m_dbconn.commit()
+                    logging.debug("update to server " + item['page_url'])
+                break
+            except Exception, e:
+                logging.debug(e)
+                self.m_dbconn = MySQLdb.connect("pic01.ss.mysql.db.sogou-op.org", "chanpinyunying","m6i1m2a3","pic_tiny", charset='utf8', use_unicode=False)
+                self.m_dbcur = self.m_dbconn.cursor()
 
         #return item
         return None
