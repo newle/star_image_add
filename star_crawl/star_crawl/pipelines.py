@@ -13,8 +13,8 @@ class StarCrawlPipeline(object):
     def __init__(self):
         self.m_dbconn = MySQLdb.connect("pic01.ss.mysql.db.sogou-op.org", "chanpinyunying","m6i1m2a3","pic_tiny", charset='utf8', use_unicode=False)
         self.m_dbcur = self.m_dbconn.cursor()
-        self.m_insertQuery = "insert into test_recommend_image_(ori_pic_src, pic_title, page_url, page_title, publish_time, tag, category, pfrom, group_index, group_mark) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
-        self.m_testQuery = "select (1) from test_recommend_image_ where ori_pic_src = %s limit 1;"
+        self.m_insertQuery = "insert into pic_recommend_image(ori_pic_src, pic_title, page_url, page_title, publish_time, tag, category, pfrom, group_index, group_mark) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        self.m_testQuery = "select (1) from pic_recommend_image where ori_pic_src = %s limit 1;"
 
     def varified(self, item):
         #if item['ori_pic_src'][idx].find(".gif") == -1 and item['ori_pic_src'][idx].find(".png") == -1:
