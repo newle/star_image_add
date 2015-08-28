@@ -175,7 +175,7 @@ class idolSpider(RedisMixin, CrawlSpider):
         #process to get star_id
         r_json = json.loads(response.body)
         #logging.debug(r_json);
-
+        idolfile = open("idol.lst", "w")
         logging.debug("idol totalnum = " + str(len(r_json['list'])))
         for i in range(len(r_json['list'])):
             person = r_json['list'][i]
@@ -183,11 +183,14 @@ class idolSpider(RedisMixin, CrawlSpider):
             self.idols_name[person['sid']] = person['name']
             logging.debug(person['sid'])
             logging.debug(person['name'].encode('gb18030'))
+            idolfile.write("%s\n" % (person['name'].encode('gb18030'),))
             idolurl = "http://data.android.idol001.com/api_moblie_idol.php?action=star_tuji_list&starid=" + str(person['sid']) + "&page=1"
             idolrequest = Request(idolurl, callback='parse_idol_list', dont_filter=True, priority=0)
             self.crawler.engine.schedule(idolrequest, spider=self.crawler.spider)
             #break
         
+
+        idolfile.flush()
 
         #for i in range(len(self.idols_id)):
         #    print self.idols_id[i], self.idols_name[self.idols_id[i]].encode('gb18030')
